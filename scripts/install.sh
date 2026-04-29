@@ -26,7 +26,7 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 # Configuration
-REPO_URL_SSH="git@github.com:lh88666/hermes-agent.git"
+REPO_URL_SSH="git@github.com:NousResearch/hermes-agent.git"
 REPO_URL_HTTPS="https://github.com/NousResearch/hermes-agent.git"
 HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 # INSTALL_DIR is resolved AFTER arg parsing and OS detection so we can pick an
@@ -52,6 +52,7 @@ ROOT_FHS_LAYOUT=false
 USE_VENV=true
 RUN_SETUP=true
 BRANCH="main"
+SKIP_CLONE=false
 
 # Detect non-interactive mode (e.g. curl | bash)
 # When stdin is not a terminal, read -p will fail with EOF,
@@ -71,6 +72,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-setup)
             RUN_SETUP=false
+            shift
+            ;;
+        --skip-clone)
+            SKIP_CLONE=true
             shift
             ;;
         --branch)
@@ -94,6 +99,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --no-venv      Don't create virtual environment"
             echo "  --skip-setup   Skip interactive setup wizard"
+            echo "  --skip-clone   Skip git clone (use existing directory)"
             echo "  --branch NAME  Git branch to install (default: main)"
             echo "  --dir PATH     Installation directory"
             echo "                   default (non-root):  ~/.hermes/hermes-agent"
@@ -798,6 +804,18 @@ show_manual_install_hint() {
 # ============================================================================
 
 clone_repo() {
+    if [ "$SKIP_CLONE" = true ]; then
+        if [ ! -d "$INSTALL_DIR" ]; then
+            log_error "--skip-clone specified but $INSTALL_DIR does not exist"
+            log_info "Create the directory first or omit --skip-clone to let the script clone for you"
+            exit 1
+        fi
+        log_info "Skipping clone (--skip-clone) — using existing directory at $INSTALL_DIR"
+        cd "$INSTALL_DIR"
+        log_success "Repository ready (skipped clone)"
+        return 0
+    fi
+
     log_info "Installing to $INSTALL_DIR..."
 
     if [ -d "$INSTALL_DIR" ]; then
